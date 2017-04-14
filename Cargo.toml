@@ -1,0 +1,23 @@
+[package]
+name = "my_utils"
+version = "0.1.0"
+authors = ["obj"]
+
+[dependencies]
+rustc-serialize = "0.3"
+hyper = "0.10"
+hyper-native-tls = "0.2.2"
+notify-rust = "3.3"
+lazy_static = "0.2"
+bindkey = { git = "https://github.com/Object905/bindkey" }
+
+[profile.release]
+opt-level = 3
+lto = true
+debug = false
+debug-assertions = false
+codegen-units = 1
+
+[[bin]]
+name = "my_utils"
+path = "./src/bin.rs"
