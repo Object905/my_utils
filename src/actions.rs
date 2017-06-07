@@ -1,5 +1,3 @@
-use hyper::Url;
-
 use tools;
 use settings;
 
@@ -7,7 +5,7 @@ use settings;
 pub fn google_selected() {
     let text = tools::get_current_selected_text();
 
-    if let Ok(_) = Url::parse(&text) {
+    if tools::is_url(&text) {
         tools::open_browser(&text);
     } else {
         let search_url = settings::GOOGLE_URL.clone() + &text;

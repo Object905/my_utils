@@ -1,14 +1,14 @@
-pub static DISPLAY_LANG: &'static str = "en";
-pub static SOURCE_LANG: &'static str = "auto";
-pub static TARGET_LANG: &'static str = "ru";
-pub static TOP_LEVEL_DOMAIN: &'static str = "ru";
+pub static DISPLAY_LANG: &str = "en";
+pub static SOURCE_LANG: &str = "auto";
+pub static TARGET_LANG: &str = "ru";
+pub static TOP_LEVEL_DOMAIN: &str = "ru";
 
-pub static API_KEY: &'static str = include_str!("../yandex_api_key");
+pub static BROWSER_COMMAND: &str = "/usr/bin/chromium";
 
-pub static BROWSER_COMMAND: &'static str = "/usr/bin/chromium";
+static API_KEY: &'static str = include_str!("../yandex_api_key");
 
 lazy_static! {
-    pub static ref DIRECTION_LANG: String = {
+    static ref DIRECTION_LANG: String = {
         if SOURCE_LANG != "auto" {
             format!("{src}-{target}", src = SOURCE_LANG, target = TARGET_LANG)
         } else {
@@ -30,5 +30,10 @@ lazy_static! {
 
     pub static ref WIKTIONARY_URL: String = {
         format!("https://{display_lang}.wiktionary.org/wiki/", display_lang = DISPLAY_LANG)
+    };
+
+    pub static ref YANDEX_URL: String = {
+        format!("https://translate.yandex.net/api/v1.5/tr.json/translate?\
+            key={api_key}&lang={lang}&text=", api_key = API_KEY, lang = *DIRECTION_LANG)
     };
 }

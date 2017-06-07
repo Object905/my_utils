@@ -1,13 +1,11 @@
 use std::process::{Command, Stdio};
-use std::io::Read;
+use std::mem;
 
-use rustc_serialize::json::Json;
-
+use serde_json;
 use hyper::client::Client;
+use notify_rust::Notification;
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
-
-use notify_rust::Notification;
 use notify_rust::NotificationUrgency::Critical;
 
 use settings;
@@ -20,36 +18,35 @@ lazy_static! {
     };
 }
 
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct YandexResponse {
+    code: u16,
+    lang: String,
+    text: [String; 1],
+}
+
 pub fn translate(text: &str) -> String {
-    let url = format!("https://translate.yandex.net/api/v1.5/tr.json/translate?\
-        key={api_key}&lang={lang}&text={text}",
-                      api_key = settings::API_KEY,
-                      lang = *settings::DIRECTION_LANG,
-                      text = text);
-    let mut response = CLIENT.get(&url).send().unwrap();
-    let mut buf = String::new();
-    response.read_to_string(&mut buf).unwrap();
-    let json = Json::from_str(&buf).unwrap();
+    let url = settings::YANDEX_URL.clone() + text;
+    let response = CLIENT.get(&url).send().unwrap();
 
+    let mut response: YandexResponse = serde_json::from_reader(response).unwrap();
 
-    let text = json.find("text").unwrap()[0]
-        .as_string()
-        .unwrap()
-        .trim_left_matches('"')
-        .trim_right_matches('"'); // remove quotes
-
-    text.to_owned()
+    mem::replace(&mut response.text[0], String::new())
 }
 
 pub fn get_current_selected_text() -> String {
-    let output =
-        Command::new("xsel")
-            .arg("-o")
-            .output()
-            .unwrap_or_else(|_| {
-                Command::new("xclip").arg("-o").output().expect("install xsel or xclip")
-            });
-    String::from_utf8_lossy(&output.stdout).into_owned()
+    let output = Command::new("xsel")
+        .arg("-o")
+        .output()
+        .unwrap_or_else(|_| {
+                            Command::new("xclip")
+                                .arg("-o")
+                                .output()
+                                .expect("install xsel or xclip")
+                        });
+
+    unsafe { String::from_utf8_unchecked(output.stdout) }
 }
 
 pub fn show_desktop_notification(summary: &str, body: &str) {
@@ -57,7 +54,7 @@ pub fn show_desktop_notification(summary: &str, body: &str) {
     if body.len() <= 15 {
         time = 2500;
     } else {
-        time = (2500 + (body.len() - 15) * 100) as i32;
+        time = 2500 + (body.len() as i32 - 15) * 100;
     }
 
     Notification::new()
@@ -70,9 +67,33 @@ pub fn show_desktop_notification(summary: &str, body: &str) {
 }
 
 pub fn open_browser(url: &str) {
-    Command::new(&*settings::BROWSER_COMMAND)
+    Command::new(settings::BROWSER_COMMAND)
         .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .arg(url)
         .spawn()
         .unwrap();
+}
+
+pub fn is_url(text: &str) -> bool {
+    const URL_START: [&str; 3] = ["http://", "https://", "www."];
+
+    for start in URL_START.iter() {
+        if text.starts_with(start) {
+            return true;
+        }
+    }
+    false
+}
+
+pub fn warmup() {
+    use lazy_static::initialize;
+
+    initialize(&settings::YANDEX_URL);
+    initialize(&settings::GOOGLE_TRANSLATOR_URL);
+    initialize(&settings::GOOGLE_URL);
+    initialize(&settings::WIKTIONARY_URL);
+    initialize(&CLIENT);
+
+    let _ = get_current_selected_text();
 }

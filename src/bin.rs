@@ -1,8 +1,11 @@
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+extern crate serde;
 extern crate hyper;
 extern crate hyper_native_tls;
-extern crate rustc_serialize;
 extern crate notify_rust;
 extern crate bindkey;
 
@@ -10,20 +13,24 @@ mod actions;
 mod settings;
 mod tools;
 
-use bindkey::*;
+use bindkey::{CallbackStorage, HotKey, Modifier, TriggerOn, keysym};
 
 fn main() {
-    HotKey::new(keysym::XK_q, vec![Modifier::Window], TriggerOn::Press)
-        .add(actions::translate_notify_selected);
+    let mut storage = CallbackStorage::new();
 
-    HotKey::new(keysym::XK_w, vec![Modifier::Window], TriggerOn::Press)
-        .add(actions::google_translate_selected);
+    storage.add(&HotKey::new(keysym::XK_q, vec![Modifier::Window], TriggerOn::Press),
+                actions::translate_notify_selected);
 
-    HotKey::new(keysym::XK_f, vec![Modifier::Window], TriggerOn::Press)
-        .add(actions::google_selected);
+    storage.add(&HotKey::new(keysym::XK_w, vec![Modifier::Window], TriggerOn::Press),
+                actions::google_translate_selected);
 
-    HotKey::new(keysym::XK_g, vec![Modifier::Window], TriggerOn::Press)
-        .add(actions::wiktionary_selected);
+    storage.add(&HotKey::new(keysym::XK_f, vec![Modifier::Window], TriggerOn::Press),
+                actions::google_selected);
 
-    start();
+    storage.add(&HotKey::new(keysym::XK_g, vec![Modifier::Window], TriggerOn::Press),
+                actions::wiktionary_selected);
+
+    tools::warmup();
+
+    bindkey::start(storage);
 }
